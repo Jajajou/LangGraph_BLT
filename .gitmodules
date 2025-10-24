@@ -1,0 +1,3 @@
+[submodule "LightRAG_BLT"]
+	path = LightRAG_BLT
+	url = https://github.com/Jajajou/LightRAG_BLT.git
