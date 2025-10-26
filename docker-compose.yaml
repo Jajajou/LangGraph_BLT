@@ -1,0 +1,53 @@
+services:
+  lightrag:
+    container_name: lightrag
+    image: ghcr.io/hkuds/lightrag:latest
+    build:
+      context: LightRAG
+      dockerfile: Dockerfile
+      tags:
+        - ghcr.io/hkuds/lightrag:latest
+    env_file: .env
+    ports: ["9621:9621"]
+    depends_on:
+      postgres:
+        condition: service_started
+      qdrant:
+        condition: service_started
+    volumes:
+      - ./data/rag_storage:/app/data/rag_storage
+      - ./data/inputs:/app/data/inputs
+      - ./data/tiktoken:/app/data/tiktoken
+      - ./config.ini:/app/config.ini
+      - ./.env:/app/.env
+    environment:
+      - TIKTOKEN_CACHE_DIR=/app/data/tiktoken
+    # restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: lightrag
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: ragpass
+    ports: ["5433:5432"]         # nếu host đã có Postgres, dùng 5433
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:6333/readyz || curl -fsS http://localhost:6333/readyz || wget -q -O- http://localhost:6333/healthz || curl -fsS http://localhost:6333/healthz || exit 1"]
+      interval: 3s
+      timeout: 2s
+      retries: 40
+      start_period: 5s
+
+volumes:
+  pg_data:
+  qdrant_data:
